@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Champions League 2024 — ML Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1f2d45;
+      --accent: #1e6fff;
+      --accent2: #00c9a7;
+      --gold: #f0b429;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --red: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0d1b2a 0%, #1a2235 50%, #0d2246 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .ucl-badge {
+      width: 56px; height: 56px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 1.7rem; font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 3px; }
+    .badge-pill {
+      margin-left: auto;
+      background: rgba(30,111,255,0.15);
+      border: 1px solid rgba(30,111,255,0.4);
+      color: #60a5fa;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 0.78rem; font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* LAYOUT */
+    main { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+    section { margin-bottom: 40px; }
+    h2.section-title {
+      font-size: 1rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    h2.section-title::before {
+      content: ''; display: block;
+      width: 3px; height: 16px;
+      background: var(--accent); border-radius: 2px;
+    }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .kpi-card.blue::after  { background: var(--accent); }
+    .kpi-card.green::after { background: var(--accent2); }
+    .kpi-card.gold::after  { background: var(--gold); }
+    .kpi-card.red::after   { background: var(--red); }
+
+    .kpi-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .kpi-value { font-size: 2rem; font-weight: 700; margin: 6px 0 4px; line-height: 1; }
+    .kpi-sub   { font-size: 0.78rem; color: var(--muted); }
+    .kpi-card.blue  .kpi-value { color: #60a5fa; }
+    .kpi-card.green .kpi-value { color: var(--accent2); }
+    .kpi-card.gold  .kpi-value { color: var(--gold); }
+    .kpi-card.red   .kpi-value { color: #f87171; }
+
+    /* CHART GRID */
+    .chart-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .chart-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1100px) {
+      .chart-grid-2 { grid-template-columns: 1fr; }
+      .chart-grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      main { padding: 20px 16px; }
+      header { padding: 20px 16px; }
+      .chart-grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .chart-card h3 {
+      font-size: 0.9rem; font-weight: 600;
+      color: var(--text); margin-bottom: 4px;
+    }
+    .chart-card p.sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+    .chart-wrap { position: relative; }
+
+    /* MODEL TABLE */
+    .model-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .model-table thead tr { border-bottom: 1px solid var(--border); }
+    .model-table th {
+      color: var(--muted); font-weight: 600;
+      text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.7px;
+      padding: 10px 14px; text-align: left;
+    }
+    .model-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .model-table tr:last-child td { border-bottom: none; }
+    .model-table tr.best td { background: rgba(30,111,255,0.06); }
+    .badge-best {
+      background: rgba(30,111,255,0.2);
+      color: #60a5fa;
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 999px;
+      font-weight: 600; margin-left: 6px;
+    }
+    .bar-inline {
+      height: 6px; border-radius: 3px;
+      background: var(--border); margin-top: 4px;
+      overflow: hidden;
+    }
+    .bar-inline-fill { height: 100%; border-radius: 3px; }
+
+    /* PLOTS */
+    .plots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .plot-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .plot-card img {
+      width: 100%; display: block;
+      filter: brightness(0.95);
+    }
+    .plot-card .plot-label {
+      padding: 10px 14px;
+      font-size: 0.8rem; color: var(--muted);
+    }
+
+    /* INSIGHTS */
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .insight-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .insight-icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .insight-card h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+    .insight-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+    footer {
+      text-align: center; color: var(--muted);
+      font-size: 0.78rem; padding: 30px 40px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="ucl-badge">⚽</div>
+  <div>
+    <h1>Champions League 2024 — ML Dashboard</h1>
+    <p>Goal prediction model · 2008–2024 · XGBoost · EDA &amp; Model Evaluation</p>
+  </div>
+  <div class="badge-pill">2023–2024 Season</div>
+</header>
+
+<main>
+
+  <!-- KPI CARDS -->
+  <section>
+    <h2 class="section-title">Model Performance</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Best Model</div>
+        <div class="kpi-value">XGBoost</div>
+        <div class="kpi-sub">Lowest RMSE across all models</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Training RMSE</div>
+        <div class="kpi-value">0.647</div>
+        <div class="kpi-sub">On holdout test set (80/20 split)</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-label">Unseen Data RMSE</div>
+        <div class="kpi-value">0.854</div>
+        <div class="kpi-sub">2023–2024 season (32 teams)</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Generalization Gap</div>
+        <div class="kpi-value">+0.207</div>
+        <div class="kpi-sub">RMSE increase on new season data</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-label">Training Seasons</div>
+        <div class="kpi-value">15</div>
+        <div class="kpi-sub">2008–2009 through 2022–2023</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Features Used</div>
+        <div class="kpi-value">4</div>
+        <div class="kpi-sub">Age, MP, PKatt, CrdY</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GOALS BY SEASON + MODEL COMPARISON -->
+  <section>
+    <h2 class="section-title">Historical Trends &amp; Model Comparison</h2>
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <h3>Total Goals by Season</h3>
+        <p class="sub">Aggregate goals scored across all teams · 2008–2023</p>
+        <div class="chart-wrap"><canvas id="goalsSeason" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Model RMSE Comparison</h3>
+        <p class="sub">Lower is better · Trained on sqrt-transformed goals</p>
+        <div class="chart-wrap"><canvas id="modelRmse" height="220"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODEL TABLE -->
+  <section>
+    <h2 class="section-title">Model Metrics Detail</h2>
+    <div class="chart-card">
+      <table class="model-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>MAE</th>
+            <th>MSE</th>
+            <th>RMSE</th>
+            <th>RMSE Bar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="best">
+            <td>XGBoost <span class="badge-best">Best</span></td>
+            <td>0.499</td><td>0.418</td><td>0.647</td>
+            <td><div class="bar-inline"><div class="bar-inline-fill" style="width:56.7%;background:#1e6fff;"></div></div></td>
+          </tr>
+          <tr>
+            <td>Random Forest</td>
+            <td>0.497</td><td>0.453</td><td>0.673</td>
+            <td><div class="bar-inline"><div class="bar-inline-fill" style="width:59%;background:#00c9a7;"></div></div></td>
+          </tr>
+          <tr>
+            <td>Lasso Regression</td>
+            <td>0.565</td><td>0.568</td><td>0.754</td>
+            <td><div class="bar-inline"><div class="bar-inline-fill" style="width:66%;background:#f0b429;"></div></div></td>
+          </tr>
+          <tr>
+            <td>Linear Regression</td>
+            <td>0.566</td><td>0.571</td><td>0.756</td>
+            <td><div class="bar-inline"><div class="bar-inline-fill" style="width:66.2%;background:#f0b429;"></div></div></td>
+          </tr>
+          <tr>
+            <td>Ridge Regression</td>
+            <td>0.566</td><td>0.571</td><td>0.756</td>
+            <td><div class="bar-inline"><div class="bar-inline-fill" style="width:66.2%;background:#ef4444;"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2024 TEAM GOALS + FEATURE IMPORTANCE -->
+  <section>
+    <h2 class="section-title">2023–2024 Season Analysis</h2>
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <h3>Team Goals — 2023/24 Season</h3>
+        <p class="sub">Total goals scored per team in UCL group stage &amp; knockout rounds</p>
+        <div class="chart-wrap"><canvas id="teamGoals" height="340"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Feature Importance (XGBoost)</h3>
+        <p class="sub">Relative contribution of each feature to goal prediction</p>
+        <div class="chart-wrap"><canvas id="featureImportance" height="200"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESIDUAL PLOTS -->
+  <section>
+    <h2 class="section-title">Model Diagnostics — Residual Plots</h2>
+    <div class="plots-grid">
+      <div class="plot-card">
+        <img src="plots/residual_plot_for_XGB.png" alt="XGBoost Residuals" />
+        <div class="plot-label">XGBoost — Best performer (RMSE 0.647)</div>
+      </div>
+      <div class="plot-card">
+        <img src="plots/residual_plot_for_RandomForest.png" alt="Random Forest Residuals" />
+        <div class="plot-label">Random Forest — 2nd best (RMSE 0.673)</div>
+      </div>
+      <div class="plot-card">
+        <img src="plots/residual_plot_for_LassoRegression.png" alt="Lasso Residuals" />
+        <div class="plot-label">Lasso Regression (RMSE 0.754)</div>
+      </div>
+      <div class="plot-card">
+        <img src="plots/residual_plot_for_LinearRegression.png" alt="Linear Regression Residuals" />
+        <div class="plot-label">Linear Regression (RMSE 0.756)</div>
+      </div>
+      <div class="plot-card">
+        <img src="plots/residual_plot_for_RidgeRegression.png" alt="Ridge Residuals" />
+        <div class="plot-label">Ridge Regression (RMSE 0.756)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSIGHTS -->
+  <section>
+    <h2 class="section-title">Key Insights</h2>
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-icon">📈</div>
+        <h4>Goals Trend Upward Over Time</h4>
+        <p>Total UCL goals have risen from 32.6 in 2008–09 to over 43 by 2022–23, reflecting more attacking play and expansion of the competition format.</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🎯</div>
+        <h4>XGBoost Outperforms Linear Models</h4>
+        <p>Tree-based models (XGBoost, Random Forest) capture non-linear interactions between features better than linear approaches, cutting RMSE by ~14%.</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">⚠️</div>
+        <h4>Generalization Gap Detected</h4>
+        <p>RMSE increases from 0.647 (training) to 0.854 on unseen 2023–24 data, suggesting the model could benefit from richer features (xG, progressive passes, etc.).</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🏆</div>
+        <h4>Manchester City Dominated 2023/24</h4>
+        <p>Man City scored 28 goals — the highest in the 2023–24 season. Real Madrid (24) and Bayern Munich (21) followed, consistent with their historical dominance.</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🔑</div>
+        <h4>Matches Played Drives Goals</h4>
+        <p>MP (matches played) is the strongest predictor — teams that advance deeper naturally score more. PKatt and CrdY add disciplinary and set-piece context.</p>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon">🔄</div>
+        <h4>Square Root Transform Improved Fit</h4>
+        <p>The target variable (goals) was right-skewed. Applying a square root transformation normalized the distribution and meaningfully improved model accuracy.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Champions League 2024 · ML Dashboard · Data sourced from FBRef · Seasons 2008–2024
+</footer>
+
+<script>
+  const GRID_COLOR = 'rgba(255,255,255,0.05)';
+  const TICK_COLOR = '#64748b';
+  Chart.defaults.color = TICK_COLOR;
+  Chart.defaults.borderColor = GRID_COLOR;
+
+  // 1. Goals by Season
+  new Chart(document.getElementById('goalsSeason'), {
+    type: 'bar',
+    data: {
+      labels: ['08-09','09-10','10-11','11-12','12-13','13-14','14-15','15-16','16-17','17-18','18-19','19-20','20-21','21-22','22-23'],
+      datasets: [{
+        label: 'Total Goals',
+        data: [32.6,33.6,36.8,36.8,39.8,38.1,41.3,39.1,42.5,44.4,42.7,47.3,42.0,43.4,43.3],
+        backgroundColor: (ctx) => {
+          const v = ctx.raw;
+          const alpha = 0.4 + (v - 30) / 20 * 0.5;
+          return `rgba(30,111,255,${alpha})`;
+        },
+        borderColor: '#1e6fff',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw} goals` } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: GRID_COLOR }, min: 25, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // 2. Model RMSE
+  new Chart(document.getElementById('modelRmse'), {
+    type: 'bar',
+    data: {
+      labels: ['XGBoost','Random Forest','Lasso','Linear Reg','Ridge'],
+      datasets: [{
+        label: 'RMSE',
+        data: [0.647, 0.673, 0.754, 0.756, 0.756],
+        backgroundColor: ['#1e6fff','#00c9a7','#f0b429','#94a3b8','#94a3b8'],
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: GRID_COLOR }, min: 0.55, max: 0.82, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+
+  // 3. Team Goals 2024
+  const teams = ['Man City','Real Madrid','Bayern Munich','Atlético Madrid','Arsenal','Barcelona','Paris S-G','Dortmund','Porto','RB Leipzig','Man Utd','Inter','Galatasaray','Napoli','FC Copenhagen','PSV Eindhoven','Feyenoord','Lazio','Real Sociedad','Porto','Shakhtar','Benfica','Sevilla','Newcastle Utd','Antwerp','Braga','Lens','Man Utd','Red Star','Union Berlin','Young Boys','Celtic','Milan','RB Salzburg'];
+  const goals = [28,24,21,20,19,19,19,17,16,14,12,10,10,10,10,8,8,8,8,16,9,7,7,6,6,6,6,12,6,6,6,5,5,4];
+
+  const teamData = [
+    {t:'Man City',g:28},{t:'Real Madrid',g:24},{t:'Bayern Munich',g:21},
+    {t:'Atlético Madrid',g:20},{t:'Arsenal',g:19},{t:'Barcelona',g:19},
+    {t:'Paris S-G',g:19},{t:'Dortmund',g:17},{t:'Porto',g:16},
+    {t:'RB Leipzig',g:14},{t:'Man Utd',g:12},{t:'Inter',g:10},
+    {t:'Galatasaray',g:10},{t:'Napoli',g:10},{t:'FC Copenhagen',g:10},
+    {t:'Shakhtar',g:9},{t:'PSV',g:8},{t:'Feyenoord',g:8},
+    {t:'Lazio',g:8},{t:'Real Sociedad',g:8},{t:'Benfica',g:7},
+    {t:'Sevilla',g:7},{t:'Antwerp',g:6},{t:'Braga',g:6},
+    {t:'Lens',g:6},{t:'Red Star',g:6},{t:'Newcastle',g:6},
+    {t:'Union Berlin',g:6},{t:'Young Boys',g:6},{t:'Celtic',g:5},
+    {t:'Milan',g:5},{t:'RB Salzburg',g:4}
+  ].sort((a,b) => b.g - a.g);
+
+  new Chart(document.getElementById('teamGoals'), {
+    type: 'bar',
+    data: {
+      labels: teamData.map(d => d.t),
+      datasets: [{
+        label: 'Goals',
+        data: teamData.map(d => d.g),
+        backgroundColor: teamData.map((d,i) => i === 0 ? '#f0b429' : i < 3 ? '#1e6fff' : 'rgba(30,111,255,0.4)'),
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: GRID_COLOR }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // 4. Feature Importance
+  new Chart(document.getElementById('featureImportance'), {
+    type: 'bar',
+    data: {
+      labels: ['MP (Matches Played)', 'Age', 'PKatt (Pen. Attempts)', 'CrdY (Yellow Cards)'],
+      datasets: [{
+        label: 'Importance',
+        data: [0.52, 0.22, 0.15, 0.11],
+        backgroundColor: ['#1e6fff','#00c9a7','#f0b429','#94a3b8'],
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: GRID_COLOR }, min: 0, max: 0.65, ticks: { format: { style: 'percent' }, font: { size: 11 } } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
