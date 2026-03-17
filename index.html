@@ -375,11 +375,6 @@
         <div class="chart-wrap"><canvas id="residualsByTeam" height="320"></canvas></div>
       </div>
     </div>
-    <div class="chart-card" style="margin-top:20px;">
-      <h3>Actuals vs Predictions — Per Team</h3>
-      <p class="sub">log(Goals) · Blue = actual · Orange = predicted</p>
-      <div class="chart-wrap"><canvas id="teamComparison" height="260"></canvas></div>
-    </div>
   </section>
 
   <!-- RESIDUAL PLOTS -->
@@ -607,26 +602,6 @@
     }
   });
 
-  // Side-by-side actual vs predicted per team
-  const sorted = [...scoreData].sort((a,b) => b.a - a.a);
-  new Chart(document.getElementById('teamComparison'), {
-    type: 'bar',
-    data: {
-      labels: sorted.map(d => d.t),
-      datasets: [
-        { label: 'Actual', data: sorted.map(d => d.a), backgroundColor: 'rgba(30,111,255,0.8)', borderRadius: 3 },
-        { label: 'Predicted', data: sorted.map(d => d.p), backgroundColor: 'rgba(240,180,41,0.7)', borderRadius: 3 }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: TICK_COLOR, font: { size: 11 } } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } },
-        y: { grid: { color: GRID_COLOR }, title: { display: true, text: 'log(Goals)', color: TICK_COLOR } }
-      }
-    }
-  });
 
   // 4. Feature Importance — real gain scores from XGBoost model
   const fiRaw = [
